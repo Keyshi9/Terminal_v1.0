@@ -1,0 +1,109 @@
+:root {
+    --bg-color: #0d0d0d;
+    --text-color: #33ff33; /* Classic terminal green */
+    --text-secondary: #cccccc; /* White/Grey for specific info */
+    --error-color: #ff3333;
+    --prompt-color: #00ccff;
+    --font-family: 'Courier New', Courier, monospace;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    font-size: 16px;
+    height: 100vh;
+    overflow: hidden; /* Prevent body scroll, handle in terminal */
+    display: flex;
+    flex-direction: column;
+}
+
+#terminal {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+}
+
+#output {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Keep content at bottom initially */
+    min-height: 0; /* Allow shrinking */
+}
+
+.line {
+    margin: 2px 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    opacity: 0;
+    animation: fadeIn 0.1s forwards;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+.system-msg {
+    color: var(--text-secondary);
+}
+
+.error-msg {
+    color: var(--error-color);
+}
+
+.success-msg {
+    color: var(--text-color);
+    font-weight: bold;
+}
+
+#input-line {
+    display: flex;
+    align-items: center;
+    margin-top: 5px;
+}
+
+#prompt {
+    color: var(--prompt-color);
+    margin-right: 10px;
+    white-space: nowrap;
+}
+
+#command-input {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    font-family: var(--font-family);
+    font-size: 16px;
+    flex: 1;
+    outline: none;
+    caret-color: var(--text-color); /* Blinking cursor color */
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

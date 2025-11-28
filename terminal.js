@@ -8,7 +8,7 @@ const Terminal = {
 
     currentMode: 'dev', // Default mode
 
-    modes: ['dev', 'crypto', 'network', 'tools'],
+    modes: ['dev', 'crypto', 'network', 'tools', 'fs', 'fun'],
 
     commands: {
         global: {
@@ -17,46 +17,79 @@ const Terminal = {
             about: 'System information',
             date: 'Show current date',
             time: 'Show current time',
-            mode: 'Switch mode (dev | crypto | network | tools)',
+            mode: 'Switch mode (dev | crypto | network | tools | fs | fun)',
             fullscreen: 'Toggle fullscreen mode',
             font: 'Change font (classic | retro | modern)',
-            color: 'Change text color (green | red | blue | pink | white)'
+            color: 'Change text color (green | red | blue | pink | white)',
+            theme: 'Change theme (matrix | cyberpunk | hacker | retro | ocean | dracula)',
+            neofetch: 'Display system information',
+            exit: 'Exit terminal (reload page)'
         },
         dev: {
             calc: 'Calculate math expression (e.g., calc 2+2)',
-            convert: 'Convert 100 USD CHF',
+            convert: 'Convert currency (e.g., convert 100 USD EUR)',
             json: 'Format JSON string',
             uuid: 'Generate UUID',
             hash: 'Simulate SHA-256 hash',
             encode: 'Base64 encode',
             decode: 'Base64 decode',
-            regex: 'Test regex (e.g., regex pattern string)'
+            regex: 'Test regex (e.g., regex pattern string)',
+            encrypt: 'Encrypt text (Caesar cipher)',
+            decrypt: 'Decrypt text (Caesar cipher)'
         },
         crypto: {
-            price: 'Show simulated price (e.g., price BTC)',
+            price: 'Show real-time price (e.g., price BTC)',
             roi: 'Calculate ROI (e.g., roi 100 150)',
             simulate: 'Simulate delta-neutral strategy',
             funding: 'Show simulated funding rate',
             spread: 'Show simulated bid/ask spread',
-            portfolio: 'Show simulated portfolio'
+            portfolio: 'Show live portfolio value',
+            alert: 'Set price alert (e.g., alert BTC 100000)'
         },
         network: {
-            ping: 'Simulate ping (e.g., ping google.com)',
+            ping: 'HTTP ping (e.g., ping google.com)',
             trace: 'Simulate traceroute',
-            whois: 'Simulate whois lookup',
-            scan: 'Simulate network scan',
-            check: 'Check port status (e.g., check 80)'
+            whois: 'WHOIS lookup',
+            scan: 'Show public IP info',
+            check: 'Check port status',
+            curl: 'Fetch URL content (e.g., curl https://api.github.com)'
         },
         tools: {
             password: 'Generate password',
-            note: 'Manage notes (add | list)',
-            task: 'Manage tasks (add | list)',
+            note: 'Manage notes (add | list | clear)',
+            task: 'Manage tasks (add | list | clear)',
             timer: 'Set timer (e.g., timer 5)',
-            random: 'Generate random number (e.g., random 1 100)'
+            random: 'Generate random number (e.g., random 1 100)',
+            export: 'Export data (notes | tasks)',
+            stats: 'Show usage statistics'
+        },
+        fs: {
+            ls: 'List directory contents',
+            cd: 'Change directory',
+            pwd: 'Print working directory',
+            mkdir: 'Create directory',
+            touch: 'Create file',
+            cat: 'Display file content',
+            echo: 'Write to file (e.g., echo "text" > file.txt)',
+            rm: 'Remove file/directory',
+            tree: 'Show directory tree'
+        },
+        fun: {
+            snake: 'Play Snake game',
+            matrix: 'Matrix effect',
+            cowsay: 'Cowsay (e.g., cowsay Hello)',
+            fortune: 'Random quote',
+            banner: 'ASCII art banner (e.g., banner CODE)',
+            weather: 'Get weather (e.g., weather Paris)',
+            joke: 'Random programming joke'
         }
     },
 
     init() {
+        // Initialize modules
+        FileSystem.init();
+        Themes.load();
+
         // Load saved mode
         const savedMode = localStorage.getItem('pro-terminal-mode');
         if (savedMode && this.modes.includes(savedMode)) {
@@ -263,6 +296,27 @@ const Terminal = {
                     this.print(`Usage: color <green | red | blue | pink | white>`, 'error-msg');
                 }
                 break;
+            case 'theme':
+                const themeName = params[0];
+                if (themeName) {
+                    if (Themes.apply(themeName)) {
+                        this.print(`Theme switched to ${themeName}.`);
+                    } else {
+                        this.print(`Invalid theme. Available: ${Themes.list().join(', ')}`, 'error-msg');
+                    }
+                } else {
+                    this.print(`Current theme: ${Themes.current}`);
+                    this.print(`Available: ${Themes.list().join(', ')}`);
+                }
+                break;
+            case 'neofetch':
+                this.print(Utils.neofetch());
+                break;
+            case 'exit':
+                this.print("Goodbye!", 'success-msg');
+                await Utils.delay(500);
+                location.reload();
+                break;
         }
     },
 
@@ -283,7 +337,7 @@ const Terminal = {
     async executeModeCommand(cmd, params) {
         switch (this.currentMode) {
             case 'dev':
-                this.executeDev(cmd, params);
+                await this.executeDev(cmd, params);
                 break;
             case 'crypto':
                 await this.executeCrypto(cmd, params);
@@ -293,6 +347,12 @@ const Terminal = {
                 break;
             case 'tools':
                 this.executeTools(cmd, params);
+                break;
+            case 'fs':
+                this.executeFS(cmd, params);
+                break;
+            case 'fun':
+                await this.executeFun(cmd, params);
                 break;
         }
     },
@@ -353,6 +413,12 @@ const Terminal = {
                 } catch (e) {
                     this.print("Invalid Regex", 'error-msg');
                 }
+                break;
+            case 'encrypt':
+                this.print(Utils.encrypt(params.join(' ')));
+                break;
+            case 'decrypt':
+                this.print(Utils.decrypt(params.join(' ')));
                 break;
         }
     },
@@ -505,13 +571,31 @@ const Terminal = {
                 // Real port checking is impossible from browser
                 this.print("Error: Port checking requires backend proxy.", 'error-msg');
                 break;
+            case 'curl':
+                const url = params[0];
+                if (!url) {
+                    this.print("Usage: curl <url>", 'error-msg');
+                    return;
+                }
+                this.print(`Fetching ${url}...`, 'system-msg');
+                try {
+                    const response = await fetch(url);
+                    const text = await response.text();
+                    const preview = text.substring(0, 500);
+                    this.print(preview + (text.length > 500 ? '...' : ''));
+                    this.print(`\nStatus: ${response.status} | Size: ${text.length} bytes`, 'system-msg');
+                } catch (e) {
+                    this.print(`Error: ${e.message}`, 'error-msg');
+                }
+                break;
         }
     },
 
     executeTools(cmd, params) {
         switch (cmd) {
             case 'password':
-                this.print(`Generated Password: ${Utils.generatePassword()}`);
+                const length = parseInt(params[0]) || 12;
+                this.print(`Generated Password: ${Utils.generatePassword(length)}`);
                 break;
             case 'note':
                 const noteAction = params[0];
@@ -525,8 +609,11 @@ const Terminal = {
                 } else if (noteAction === 'list') {
                     this.print("--- Notes ---");
                     notes.forEach((n, i) => this.print(`${i + 1}. ${n}`));
+                } else if (noteAction === 'clear') {
+                    localStorage.setItem('pro-terminal-notes', '[]');
+                    this.print("Notes cleared.");
                 } else {
-                    this.print("Usage: note add <content> | note list", 'error-msg');
+                    this.print("Usage: note add <content> | note list | note clear", 'error-msg');
                 }
                 break;
             case 'task':
@@ -541,8 +628,11 @@ const Terminal = {
                 } else if (taskAction === 'list') {
                     this.print("--- Tasks ---");
                     tasks.forEach((t, i) => this.print(`${i + 1}. [${t.done ? 'x' : ' '}] ${t.text}`));
+                } else if (taskAction === 'clear') {
+                    localStorage.setItem('pro-terminal-tasks', '[]');
+                    this.print("Tasks cleared.");
                 } else {
-                    this.print("Usage: task add <content> | task list", 'error-msg');
+                    this.print("Usage: task add <content> | task list | task clear", 'error-msg');
                 }
                 break;
             case 'timer':
@@ -554,13 +644,203 @@ const Terminal = {
                 this.print(`Timer set for ${seconds} seconds...`, 'system-msg');
                 setTimeout(() => {
                     this.print(`TIMER DONE: ${seconds} seconds elapsed.`, 'success-msg');
-                    // Optional: play sound or alert
                 }, seconds * 1000);
                 break;
             case 'random':
                 const min = parseInt(params[0]) || 0;
                 const max = parseInt(params[1]) || 100;
                 this.print(`Random (${min}-${max}): ${Utils.randomInt(min, max)}`);
+                break;
+            case 'export':
+                const dataType = params[0];
+                if (dataType === 'notes') {
+                    const notes = localStorage.getItem('pro-terminal-notes') || '[]';
+                    const blob = new Blob([notes], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'notes.json';
+                    a.click();
+                    this.print("Notes exported.");
+                } else if (dataType === 'tasks') {
+                    const tasks = localStorage.getItem('pro-terminal-tasks') || '[]';
+                    const blob = new Blob([tasks], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'tasks.json';
+                    a.click();
+                    this.print("Tasks exported.");
+                } else {
+                    this.print("Usage: export <notes | tasks>", 'error-msg');
+                }
+                break;
+            case 'stats':
+                const commandCount = this.history.length;
+                const mostUsed = {};
+                this.history.forEach(cmd => {
+                    const base = cmd.split(' ')[0];
+                    mostUsed[base] = (mostUsed[base] || 0) + 1;
+                });
+                const sorted = Object.entries(mostUsed).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+                this.print("--- Usage Statistics ---");
+                this.print(`Total commands: ${commandCount}`);
+                this.print(`Current mode: ${this.currentMode}`);
+                this.print("\nTop 5 commands:");
+                sorted.forEach(([cmd, count]) => this.print(`  ${cmd}: ${count}`));
+                break;
+        }
+    },
+
+    executeFS(cmd, params) {
+        switch (cmd) {
+            case 'ls':
+                const path = params[0] || '.';
+                const result = FileSystem.ls(path);
+                if (result.error) {
+                    this.print(result.error, 'error-msg');
+                } else {
+                    result.forEach(item => {
+                        const icon = item.isDir ? '📁' : '📄';
+                        this.print(`${icon} ${item.name}`);
+                    });
+                }
+                break;
+            case 'cd':
+                const cdResult = FileSystem.cd(params[0] || '/home/user');
+                if (cdResult.error) {
+                    this.print(cdResult.error, 'error-msg');
+                } else {
+                    this.prompt.innerHTML = `user@pro-sys [fs]:${FileSystem.currentPath}$`;
+                }
+                break;
+            case 'pwd':
+                this.print(FileSystem.pwd());
+                break;
+            case 'mkdir':
+                if (!params[0]) {
+                    this.print("Usage: mkdir <name>", 'error-msg');
+                    return;
+                }
+                const mkdirResult = FileSystem.mkdir(params[0]);
+                if (mkdirResult.error) {
+                    this.print(mkdirResult.error, 'error-msg');
+                } else {
+                    this.print(`Directory created: ${params[0]}`);
+                }
+                break;
+            case 'touch':
+                if (!params[0]) {
+                    this.print("Usage: touch <filename>", 'error-msg');
+                    return;
+                }
+                const touchResult = FileSystem.touch(params[0]);
+                if (touchResult.error) {
+                    this.print(touchResult.error, 'error-msg');
+                } else {
+                    this.print(`File created: ${params[0]}`);
+                }
+                break;
+            case 'cat':
+                if (!params[0]) {
+                    this.print("Usage: cat <filename>", 'error-msg');
+                    return;
+                }
+                const catResult = FileSystem.cat(params[0]);
+                if (catResult.error) {
+                    this.print(catResult.error, 'error-msg');
+                } else {
+                    this.print(catResult.content);
+                }
+                break;
+            case 'echo':
+                // echo "text" > file.txt
+                const text = params.join(' ');
+                const match = text.match(/^"([^"]+)"\s*>\s*(.+)$/);
+                if (match) {
+                    const echoResult = FileSystem.echo(match[1], match[2]);
+                    if (echoResult.error) {
+                        this.print(echoResult.error, 'error-msg');
+                    } else {
+                        this.print(`Written to ${match[2]}`);
+                    }
+                } else {
+                    this.print(text);
+                }
+                break;
+            case 'rm':
+                if (!params[0]) {
+                    this.print("Usage: rm <name>", 'error-msg');
+                    return;
+                }
+                const rmResult = FileSystem.rm(params[0]);
+                if (rmResult.error) {
+                    this.print(rmResult.error, 'error-msg');
+                } else {
+                    this.print(`Removed: ${params[0]}`);
+                }
+                break;
+            case 'tree':
+                this.print("Directory tree:");
+                this.print(FileSystem.currentPath);
+                const treeResult = FileSystem.ls('.');
+                if (!treeResult.error) {
+                    treeResult.forEach(item => {
+                        const icon = item.isDir ? '├── 📁' : '├── 📄';
+                        this.print(`${icon} ${item.name}`);
+                    });
+                }
+                break;
+        }
+    },
+
+    async executeFun(cmd, params) {
+        switch (cmd) {
+            case 'snake':
+                this.print("Starting Snake game...", 'system-msg');
+                this.print("Use W/A/S/D to move, Q to quit", 'system-msg');
+                await Utils.delay(1000);
+                Games.snake.init(this);
+                break;
+            case 'matrix':
+                this.print("Entering the Matrix...", 'success-msg');
+                await Utils.delay(500);
+                Utils.matrixEffect(this, 3000);
+                break;
+            case 'cowsay':
+                const cowText = params.join(' ') || 'Hello from the terminal!';
+                this.print(Utils.cowsay(cowText));
+                break;
+            case 'fortune':
+                this.print(Utils.fortune());
+                break;
+            case 'banner':
+                const bannerText = params.join(' ') || 'CODE';
+                this.print(Utils.banner(bannerText));
+                break;
+            case 'weather':
+                const city = params[0] || 'Paris';
+                this.print(`Fetching weather for ${city}...`, 'system-msg');
+                const weather = await Utils.getWeather(city);
+                if (weather) {
+                    this.print(`Temperature: ${weather.temp}°C`);
+                    this.print(`Condition: ${weather.desc}`);
+                    this.print(`Humidity: ${weather.humidity}%`);
+                    this.print(`Wind: ${weather.wind} km/h`);
+                } else {
+                    this.print("Could not fetch weather data.", 'error-msg');
+                }
+                break;
+            case 'joke':
+                const jokes = [
+                    "Why do programmers prefer dark mode? Because light attracts bugs!",
+                    "How many programmers does it take to change a light bulb? None, that's a hardware problem.",
+                    "Why do Java developers wear glasses? Because they don't C#.",
+                    "A SQL query walks into a bar, walks up to two tables and asks... 'Can I join you?'",
+                    "There are 10 types of people in the world: those who understand binary, and those who don't."
+                ];
+                this.print(jokes[Math.floor(Math.random() * jokes.length)]);
                 break;
         }
     },

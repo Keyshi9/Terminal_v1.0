@@ -17,7 +17,10 @@ const Terminal = {
             about: 'System information',
             date: 'Show current date',
             time: 'Show current time',
-            mode: 'Switch mode (dev | crypto | network | tools)'
+            mode: 'Switch mode (dev | crypto | network | tools)',
+            fullscreen: 'Toggle fullscreen mode',
+            font: 'Change font (classic | retro | modern)',
+            color: 'Change text color (green | red | blue | pink | white)'
         },
         dev: {
             calc: 'Calculate math expression (e.g., calc 2+2)',
@@ -57,15 +60,55 @@ const Terminal = {
         // Load saved mode
         const savedMode = localStorage.getItem('pro-terminal-mode');
         if (savedMode && this.modes.includes(savedMode)) {
-            this.switchMode(savedMode, true);
+            this.currentMode = savedMode;
         } else {
-            this.switchMode('dev', true);
+            this.currentMode = 'dev';
+        }
+
+        // Load saved font
+        const savedFont = localStorage.getItem('pro-terminal-font');
+        if (savedFont) {
+            document.documentElement.style.setProperty('--font-family', `var(--font-${savedFont})`);
+        }
+
+        // Load saved color
+        const savedColor = localStorage.getItem('pro-terminal-color');
+        if (savedColor) {
+            this.changeColor(savedColor);
         }
 
         this.input.addEventListener('keydown', (e) => this.handleInput(e));
         document.addEventListener('click', () => this.input.focus());
 
+        this.runStartupSequence();
+    },
+
+    async runStartupSequence() {
+        this.input.disabled = true;
+        this.print("BIOS CHECK ...................................... [OK]", 'system-msg');
+        await Utils.delay(300);
+        this.print("LOADING KERNEL .................................. [OK]", 'system-msg');
+        await Utils.delay(300);
+        this.print("MOUNTING VOLUMES ................................ [OK]", 'system-msg');
+        await Utils.delay(200);
+        this.print("NETWORK INTERFACE ............................... [ONLINE]", 'system-msg');
+        await Utils.delay(400);
+
+        const loadingLine = document.createElement('div');
+        loadingLine.className = 'line system-msg';
+        this.output.appendChild(loadingLine);
+
+        for (let i = 0; i <= 100; i += 4) {
+            const bars = '|'.repeat(Math.floor(i / 2));
+            const spaces = ' '.repeat(50 - Math.floor(i / 2));
+            loadingLine.textContent = `SYSTEM LOADING [${bars}${spaces}] ${i}%`;
+            this.scrollToBottom();
+            await Utils.delay(20);
+        }
+
         this.printWelcomeMessage();
+        this.input.disabled = false;
+        this.input.focus();
     },
 
     async printWelcomeMessage() {
@@ -73,10 +116,9 @@ const Terminal = {
         this.print("Made by SS.");
         this.print("Type 'help' to see commands.");
         this.print("Type 'mode dev | crypto | network | tools' to switch.");
-        this.print("Initializing modules...", 'system-msg');
-        await Utils.delay(800);
         this.print("System ready.", 'success-msg');
         this.print("----------------------------------------", 'system-msg');
+        this.switchMode(this.currentMode, true); // Update prompt
     },
 
     switchMode(mode, silent = false) {
@@ -189,6 +231,52 @@ const Terminal = {
                     this.print(`Available modes: ${this.modes.join(', ')}`);
                 }
                 break;
+            case 'fullscreen':
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(e => {
+                        this.print(`Error enabling fullscreen: ${e.message}`, 'error-msg');
+                    });
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }
+                break;
+            case 'font':
+                const fontName = params[0];
+                const validFonts = ['classic', 'retro', 'modern'];
+                if (validFonts.includes(fontName)) {
+                    document.documentElement.style.setProperty('--font-family', `var(--font-${fontName})`);
+                    localStorage.setItem('pro-terminal-font', fontName);
+                    this.print(`Font switched to ${fontName}.`);
+                } else {
+                    this.print(`Usage: font <classic | retro | modern>`, 'error-msg');
+                }
+                break;
+            case 'color':
+                const colorName = params[0];
+                const validColors = ['green', 'red', 'blue', 'pink', 'white'];
+                if (validColors.includes(colorName)) {
+                    this.changeColor(colorName);
+                    this.print(`Color switched to ${colorName}.`);
+                } else {
+                    this.print(`Usage: color <green | red | blue | pink | white>`, 'error-msg');
+                }
+                break;
+        }
+    },
+
+    changeColor(color) {
+        const colors = {
+            'green': '#33ff33',
+            'red': '#ff3333',
+            'blue': '#33ccff',
+            'pink': '#ff33cc',
+            'white': '#ffffff'
+        };
+        if (colors[color]) {
+            document.documentElement.style.setProperty('--text-color', colors[color]);
+            localStorage.setItem('pro-terminal-color', color);
         }
     },
 
@@ -486,9 +574,11 @@ const Terminal = {
     },
 
     scrollToBottom() {
-        // Keep the input line in view
         const terminal = document.getElementById('terminal');
-        terminal.scrollTop = terminal.scrollHeight;
+        // Use setTimeout to ensure DOM has updated
+        setTimeout(() => {
+            terminal.scrollTop = terminal.scrollHeight;
+        }, 0);
     }
 };
 

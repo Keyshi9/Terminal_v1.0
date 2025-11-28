@@ -1,10 +1,19 @@
 :root {
     --bg-color: #0d0d0d;
-    --text-color: #33ff33; /* Classic terminal green */
-    --text-secondary: #cccccc; /* White/Grey for specific info */
+    --text-color: #33ff33;
+    /* Classic terminal green */
+    --text-secondary: #cccccc;
+    /* White/Grey for specific info */
     --error-color: #ff3333;
     --prompt-color: #00ccff;
-    --font-family: 'Courier New', Courier, monospace;
+
+    /* Font Options */
+    --font-classic: 'Courier New', Courier, monospace;
+    --font-retro: 'VT323', monospace;
+    --font-modern: 'Fira Code', monospace;
+
+    --font-family: var(--font-classic);
+    /* Default */
 }
 
 * {
@@ -17,9 +26,10 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     font-family: var(--font-family);
-    font-size: 16px;
+    font-size: 18px;
     height: 100vh;
-    overflow: hidden; /* Prevent body scroll, handle in terminal */
+    overflow: hidden;
+    /* Prevent body scroll, handle in terminal */
     display: flex;
     flex-direction: column;
 }
@@ -28,18 +38,26 @@ body {
     padding: 20px;
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     width: 100%;
     max-width: 100%;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+}
+
+#terminal::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari/Opera */
 }
 
 #output {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end; /* Keep content at bottom initially */
-    min-height: 0; /* Allow shrinking */
+    min-height: min-content;
 }
 
 .line {
@@ -51,7 +69,9 @@ body {
 }
 
 @keyframes fadeIn {
-    to { opacity: 1; }
+    to {
+        opacity: 1;
+    }
 }
 
 .system-msg {
@@ -87,23 +107,8 @@ body {
     font-size: 16px;
     flex: 1;
     outline: none;
-    caret-color: var(--text-color); /* Blinking cursor color */
+    caret-color: var(--text-color);
+    /* Blinking cursor color */
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--bg-color);
-}
-
-::-webkit-scrollbar-thumb {
-    background: #333;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
+/* Scrollbar hidden globally */

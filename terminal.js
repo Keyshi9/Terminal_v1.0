@@ -8,7 +8,7 @@ const Terminal = {
 
     currentMode: 'dev', // Default mode
 
-    modes: ['dev', 'crypto', 'network', 'tools', 'fs', 'fun'],
+    modes: ['dev', 'crypto', 'network', 'tools', 'fs', 'fun', 'ai', 'chat'],
 
     commands: {
         global: {
@@ -44,7 +44,9 @@ const Terminal = {
             funding: 'Show simulated funding rate',
             spread: 'Show simulated bid/ask spread',
             portfolio: 'Show live portfolio value',
-            alert: 'Set price alert (e.g., alert BTC 100000)'
+            alert: 'Set price alert (e.g., alert BTC 100000)',
+            dashboard: 'Live Top 10 crypto dashboard',
+            blackjack: 'Play Blackjack (e.g., blackjack bet 50 | hit | stand | balance)'
         },
         network: {
             ping: 'HTTP ping (e.g., ping google.com)',
@@ -82,6 +84,19 @@ const Terminal = {
             banner: 'ASCII art banner (e.g., banner CODE)',
             weather: 'Get weather (e.g., weather Paris)',
             joke: 'Random programming joke'
+        },
+        ai: {
+            ask: 'Ask AI a question (e.g., ask What is JavaScript?)',
+            config: 'Set Gemini API key (e.g., config YOUR_KEY)',
+            clear: 'Clear conversation history',
+            help: 'AI mode help'
+        },
+        chat: {
+            send: 'Send message to all users (e.g., send Hello!)',
+            name: 'Set your username (e.g., name John)',
+            listen: 'Start listening for messages',
+            stop: 'Stop listening',
+            help: 'Chat mode help'
         }
     },
 
@@ -89,6 +104,9 @@ const Terminal = {
         // Initialize modules
         FileSystem.init();
         Themes.load();
+        AI.loadApiKey();
+        Blackjack.init();
+        LiveChat.loadUsername();
 
         // Load saved mode
         const savedMode = localStorage.getItem('pro-terminal-mode');
@@ -247,8 +265,9 @@ const Terminal = {
                 this.output.innerHTML = '';
                 break;
             case 'about':
-                this.print("Pro Terminal System v1.0");
+                this.print("Dev Terminal System v1.0");
                 this.print("Built for professional use cases.");
+                this.print("Made by SS.");
                 break;
             case 'date':
                 this.print(Utils.getDate());
@@ -353,6 +372,12 @@ const Terminal = {
                 break;
             case 'fun':
                 await this.executeFun(cmd, params);
+                break;
+            case 'ai':
+                await this.executeAI(cmd, params);
+                break;
+            case 'chat':
+                await this.executeChat(cmd, params);
                 break;
         }
     },
@@ -690,6 +715,93 @@ const Terminal = {
                 this.print("\nTop 5 commands:");
                 sorted.forEach(([cmd, count]) => this.print(`  ${cmd}: ${count}`));
                 break;
+        }
+    },
+
+    async executeAI(cmd, params) {
+        switch (cmd) {
+            case 'ask':
+                const question = params.join(' ');
+                if (!question) {
+                    this.print("Usage: ask <question>", 'error-msg');
+                    return;
+                }
+                this.print("Thinking...", 'system-msg');
+                const response = await AI.chat(question);
+                if (response.error) {
+                    this.print(response.message, 'error-msg');
+                } else {
+                    this.print(`AI: ${response.message}`);
+                }
+                break;
+            case 'config':
+                const key = params[0];
+                if (!key) {
+                    this.print("Usage: config <api-key>", 'error-msg');
+                    return;
+                }
+                AI.setApiKey(key);
+                this.print("API Key saved.", 'success-msg');
+                break;
+            case 'clear':
+                AI.clearHistory();
+                this.print("Conversation history cleared.");
+                break;
+            case 'help':
+                this.print("AI Commands: ask, config, clear");
+                break;
+            default:
+                this.print(`Unknown command: ${cmd}`, 'error-msg');
+        }
+    },
+
+    async executeChat(cmd, params) {
+        switch (cmd) {
+            case 'send':
+                const message = params.join(' ');
+                if (!message) {
+                    this.print("Usage: send <message>", 'error-msg');
+                    return;
+                }
+                const sendResult = await LiveChat.sendMessage(message);
+                if (sendResult.error) {
+                    this.print(`Error: ${sendResult.message}`, 'error-msg');
+                } else {
+                    this.print(`You: ${message}`);
+                }
+                break;
+            case 'name':
+                const name = params[0];
+                if (!name) {
+                    this.print("Usage: name <username>", 'error-msg');
+                    return;
+                }
+                LiveChat.setUsername(name);
+                this.print(`Username set to ${name}.`, 'success-msg');
+                break;
+            case 'listen':
+                if (LiveChat.pollInterval) {
+                    this.print("Already listening.", 'error-msg');
+                    return;
+                }
+                this.print("Listening for messages...", 'system-msg');
+                LiveChat.startPolling((messages) => {
+                    messages.forEach(msg => {
+                        if (msg.username !== LiveChat.username) {
+                            this.print(`[${new Date(msg.timestamp).toLocaleTimeString()}] ${msg.username}: ${msg.text}`);
+                        }
+                    });
+                });
+                break;
+            case 'stop':
+                LiveChat.stopPolling();
+                this.print("Stopped listening.", 'system-msg');
+                break;
+            case 'help':
+                this.print("Chat Commands: send, name, listen, stop");
+                break;
+            default:
+                this.print(`Unknown command: ${cmd}`, 'error-msg');
         }
     },
 

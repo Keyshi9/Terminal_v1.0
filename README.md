@@ -26,12 +26,14 @@ A professional, feature-rich web-based terminal emulator built with Vanilla Java
 
 #### **Crypto Mode** - Cryptocurrency Tools
 - **Live price data** from Binance & CoinGecko APIs
+- **Live Dashboard**: Top 10 Crypto Market Cap with real-time updates
+- **Blackjack**: Play with virtual balance (bet, hit, stand)
 - ROI calculator
 - Delta-neutral strategy simulator
 - Funding rate tracker
 - Bid/ask spread calculator
 - Real-time portfolio valuation
-- Price alerts (coming soon)
+- Price alerts
 
 #### **Network Mode** - Network Diagnostics
 - HTTP latency testing (ping)
@@ -54,6 +56,17 @@ A professional, feature-rich web-based terminal emulator built with Vanilla Java
 - Commands: `ls`, `cd`, `pwd`, `mkdir`, `touch`, `cat`, `echo`, `rm`, `tree`
 - Persistent across sessions
 - File and directory management
+
+#### **AI Mode** - Intelligent Assistant
+- **Gemini Integration**: Chat with Google's Gemini AI
+- Commands: `ask <question>`, `config <api-key>`, `clear`
+- Context-aware conversations
+
+#### **Chat Mode** - Live Communication
+- **Real-time Chat**: Message other users of the terminal
+- **Anonymous or Named**: Set your username
+- Commands: `send`, `listen`, `stop`, `name`
+- Powered by Firebase Realtime Database
 
 #### **Fun Mode** - Games & Entertainment
 - **Snake game** (WASD controls)

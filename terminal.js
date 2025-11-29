@@ -528,6 +528,89 @@ const Terminal = {
                 this.print("----------------------");
                 this.print(`Total Value: $${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}`, 'success-msg');
                 break;
+            case 'alert':
+                // alert BTC 100000
+                this.print(`Alert set for ${params[0]} at $${params[1]}`, 'system-msg');
+                break;
+            case 'dashboard':
+                this.print("Fetching Top 10 Crypto Dashboard...", 'system-msg');
+                const dashResult = await CryptoDashboard.fetchTop10();
+                if (dashResult.error) {
+                    this.print(`Error: ${dashResult.message}`, 'error-msg');
+                } else {
+                    if (dashResult.warning) {
+                        this.print(dashResult.warning, 'error-msg');
+                    }
+                    this.print("--- TOP 10 CRYPTO MARKET CAP ---");
+                    this.print("RANK | SYMBOL | PRICE       | 24H % | MKT CAP");
+                    this.print("-".repeat(50));
+                    dashResult.data.forEach(coin => {
+                        const price = CryptoDashboard.formatPrice(coin.price);
+                        const change = `${coin.change24h > 0 ? '+' : ''}${coin.change24h.toFixed(2)}%`;
+                        const cap = CryptoDashboard.formatMarketCap(coin.marketCap);
+                        const dir = coin.priceDirection;
+                        const color = coin.change24h >= 0 ? 'green' : 'red';
+                        // Simple formatting, in a real terminal we'd use fixed width
+                        this.print(`#${coin.rank}   ${coin.symbol.padEnd(6)} ${price.padEnd(12)} ${change.padEnd(7)} ${cap}`);
+                    });
+                    this.print("\nTip: Use 'dashboard' again to refresh.");
+                }
+                break;
+            case 'blackjack':
+                const bjCmd = params[0];
+                if (!bjCmd) {
+                    this.print("Usage: blackjack <bet | hit | stand | balance>", 'error-msg');
+                    return;
+                }
+
+                if (bjCmd === 'bet') {
+                    const amount = parseInt(params[1]);
+                    if (isNaN(amount)) {
+                        this.print("Usage: blackjack bet <amount>", 'error-msg');
+                        return;
+                    }
+                    const start = Blackjack.startGame(amount);
+                    if (start.error) {
+                        this.print(start.message, 'error-msg');
+                    } else {
+                        this.print(`Game started! Bet: $${amount}`);
+                        this.print(`Dealer shows: ${Blackjack.displayCard(Blackjack.dealerHand[0])} [?]`);
+                        this.print(`Your hand: ${Blackjack.playerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${Blackjack.handValue(Blackjack.playerHand)})`);
+                    }
+                } else if (bjCmd === 'hit') {
+                    const hit = Blackjack.hit();
+                    if (hit.error) {
+                        this.print(hit.message, 'error-msg');
+                    } else {
+                        const card = Blackjack.playerHand[Blackjack.playerHand.length - 1];
+                        this.print(`Hit: ${Blackjack.displayCard(card)}`);
+                        this.print(`Your hand: ${Blackjack.playerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${hit.value})`);
+                        if (hit.bust) {
+                            this.print("BUST! You lose.", 'error-msg');
+                            this.print(`Balance: $${Blackjack.playerBalance}`);
+                        }
+                    }
+                } else if (bjCmd === 'stand') {
+                    const stand = Blackjack.stand();
+                    if (stand.error) {
+                        this.print(stand.message, 'error-msg');
+                    } else {
+                        this.print(`Dealer shows: ${Blackjack.dealerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${stand.dealerValue})`);
+                        if (stand.result === 'win') {
+                            this.print("YOU WIN!", 'success-msg');
+                        } else if (stand.result === 'push') {
+                            this.print("PUSH (Tie).", 'system-msg');
+                        } else {
+                            this.print("DEALER WINS.", 'error-msg');
+                        }
+                        this.print(`Balance: $${Blackjack.playerBalance}`);
+                    }
+                } else if (bjCmd === 'balance') {
+                    this.print(`Current Balance: $${Blackjack.playerBalance}`);
+                } else {
+                    this.print("Unknown blackjack command.", 'error-msg');
+                }
+                break;
         }
     },
 

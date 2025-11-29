@@ -17,7 +17,7 @@ const Terminal = {
             about: 'System information',
             date: 'Show current date',
             time: 'Show current time',
-            mode: 'Switch mode (dev | crypto | network | tools | fs | fun)',
+            mode: 'Switch mode (dev | crypto | network | tools | fs | fun | ai | chat)',
             fullscreen: 'Toggle fullscreen mode',
             font: 'Change font (classic | retro | modern)',
             color: 'Change text color (green | red | blue | pink | white)',
@@ -45,8 +45,7 @@ const Terminal = {
             spread: 'Show simulated bid/ask spread',
             portfolio: 'Show live portfolio value',
             alert: 'Set price alert (e.g., alert BTC 100000)',
-            dashboard: 'Live Top 10 crypto dashboard',
-            blackjack: 'Play Blackjack (e.g., blackjack bet 50 | hit | stand | balance)'
+            dashboard: 'Live Top 10 crypto dashboard'
         },
         network: {
             ping: 'HTTP ping (e.g., ping google.com)',
@@ -83,7 +82,8 @@ const Terminal = {
             fortune: 'Random quote',
             banner: 'ASCII art banner (e.g., banner CODE)',
             weather: 'Get weather (e.g., weather Paris)',
-            joke: 'Random programming joke'
+            joke: 'Random programming joke',
+            blackjack: 'Play Blackjack (e.g., blackjack bet 50 | hit | stand | balance)'
         },
         ai: {
             ask: 'Ask AI a question (e.g., ask What is JavaScript?)',
@@ -556,61 +556,6 @@ const Terminal = {
                     this.print("\nTip: Use 'dashboard' again to refresh.");
                 }
                 break;
-            case 'blackjack':
-                const bjCmd = params[0];
-                if (!bjCmd) {
-                    this.print("Usage: blackjack <bet | hit | stand | balance>", 'error-msg');
-                    return;
-                }
-
-                if (bjCmd === 'bet') {
-                    const amount = parseInt(params[1]);
-                    if (isNaN(amount)) {
-                        this.print("Usage: blackjack bet <amount>", 'error-msg');
-                        return;
-                    }
-                    const start = Blackjack.startGame(amount);
-                    if (start.error) {
-                        this.print(start.message, 'error-msg');
-                    } else {
-                        this.print(`Game started! Bet: $${amount}`);
-                        this.print(`Dealer shows: ${Blackjack.displayCard(Blackjack.dealerHand[0])} [?]`);
-                        this.print(`Your hand: ${Blackjack.playerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${Blackjack.handValue(Blackjack.playerHand)})`);
-                    }
-                } else if (bjCmd === 'hit') {
-                    const hit = Blackjack.hit();
-                    if (hit.error) {
-                        this.print(hit.message, 'error-msg');
-                    } else {
-                        const card = Blackjack.playerHand[Blackjack.playerHand.length - 1];
-                        this.print(`Hit: ${Blackjack.displayCard(card)}`);
-                        this.print(`Your hand: ${Blackjack.playerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${hit.value})`);
-                        if (hit.bust) {
-                            this.print("BUST! You lose.", 'error-msg');
-                            this.print(`Balance: $${Blackjack.playerBalance}`);
-                        }
-                    }
-                } else if (bjCmd === 'stand') {
-                    const stand = Blackjack.stand();
-                    if (stand.error) {
-                        this.print(stand.message, 'error-msg');
-                    } else {
-                        this.print(`Dealer shows: ${Blackjack.dealerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${stand.dealerValue})`);
-                        if (stand.result === 'win') {
-                            this.print("YOU WIN!", 'success-msg');
-                        } else if (stand.result === 'push') {
-                            this.print("PUSH (Tie).", 'system-msg');
-                        } else {
-                            this.print("DEALER WINS.", 'error-msg');
-                        }
-                        this.print(`Balance: $${Blackjack.playerBalance}`);
-                    }
-                } else if (bjCmd === 'balance') {
-                    this.print(`Current Balance: $${Blackjack.playerBalance}`);
-                } else {
-                    this.print("Unknown blackjack command.", 'error-msg');
-                }
-                break;
         }
     },
 
@@ -863,7 +808,7 @@ const Terminal = {
                 this.print(`Username set to ${name}.`, 'success-msg');
                 break;
             case 'listen':
-                if (LiveChat.pollInterval) {
+                if (LiveChat.eventSource) {
                     this.print("Already listening.", 'error-msg');
                     return;
                 }
@@ -1036,6 +981,61 @@ const Terminal = {
                     "There are 10 types of people in the world: those who understand binary, and those who don't."
                 ];
                 this.print(jokes[Math.floor(Math.random() * jokes.length)]);
+                break;
+            case 'blackjack':
+                const bjCmd = params[0];
+                if (!bjCmd) {
+                    this.print("Usage: blackjack <bet | hit | stand | balance>", 'error-msg');
+                    return;
+                }
+
+                if (bjCmd === 'bet') {
+                    const amount = parseInt(params[1]);
+                    if (isNaN(amount)) {
+                        this.print("Usage: blackjack bet <amount>", 'error-msg');
+                        return;
+                    }
+                    const start = Blackjack.startGame(amount);
+                    if (start.error) {
+                        this.print(start.message, 'error-msg');
+                    } else {
+                        this.print(`Game started! Bet: $${amount}`);
+                        this.print(`Dealer shows: ${Blackjack.displayCard(Blackjack.dealerHand[0])} [?]`);
+                        this.print(`Your hand: ${Blackjack.playerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${Blackjack.handValue(Blackjack.playerHand)})`);
+                    }
+                } else if (bjCmd === 'hit') {
+                    const hit = Blackjack.hit();
+                    if (hit.error) {
+                        this.print(hit.message, 'error-msg');
+                    } else {
+                        const card = Blackjack.playerHand[Blackjack.playerHand.length - 1];
+                        this.print(`Hit: ${Blackjack.displayCard(card)}`);
+                        this.print(`Your hand: ${Blackjack.playerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${hit.value})`);
+                        if (hit.bust) {
+                            this.print("BUST! You lose.", 'error-msg');
+                            this.print(`Balance: $${Blackjack.playerBalance}`);
+                        }
+                    }
+                } else if (bjCmd === 'stand') {
+                    const stand = Blackjack.stand();
+                    if (stand.error) {
+                        this.print(stand.message, 'error-msg');
+                    } else {
+                        this.print(`Dealer shows: ${Blackjack.dealerHand.map(c => Blackjack.displayCard(c)).join(' ')} (${stand.dealerValue})`);
+                        if (stand.result === 'win') {
+                            this.print("YOU WIN!", 'success-msg');
+                        } else if (stand.result === 'push') {
+                            this.print("PUSH (Tie).", 'system-msg');
+                        } else {
+                            this.print("DEALER WINS.", 'error-msg');
+                        }
+                        this.print(`Balance: $${Blackjack.playerBalance}`);
+                    }
+                } else if (bjCmd === 'balance') {
+                    this.print(`Current Balance: $${Blackjack.playerBalance}`);
+                } else {
+                    this.print("Unknown blackjack command.", 'error-msg');
+                }
                 break;
         }
     },

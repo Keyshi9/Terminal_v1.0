@@ -258,13 +258,11 @@ const CryptoDashboard = {
     }
 };
 
-// Live Chat with Firebase Realtime Database (free tier)
+// Live Chat using ntfy.sh (Public Pub/Sub service)
 const LiveChat = {
-    messages: [],
     username: 'Anonymous',
-    firebaseUrl: 'https://terminal-chat-default-rtdb.firebaseio.com',
-    lastMessageId: 0,
-    pollInterval: null,
+    topic: 'pro-terminal-chat-global', // Public topic
+    eventSource: null,
 
     setUsername(name) {
         this.username = name || 'Anonymous';
@@ -277,18 +275,16 @@ const LiveChat = {
     },
 
     async sendMessage(text) {
-        const message = {
-            username: this.username,
+        const message = JSON.stringify({
+            user: this.username,
             text: text,
-            timestamp: Date.now(),
-            id: Date.now() + Math.random()
-        };
+            time: Date.now()
+        });
 
         try {
-            await fetch(`${this.firebaseUrl}/messages.json`, {
+            await fetch(`https://ntfy.sh/${this.topic}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(message)
+                body: message
             });
             return { error: false };
         } catch (e) {
@@ -296,40 +292,54 @@ const LiveChat = {
         }
     },
 
-    async fetchMessages() {
-        try {
-            const response = await fetch(`${this.firebaseUrl}/messages.json?orderBy="timestamp"&limitToLast=50`);
-            const data = await response.json();
-
-            if (!data) return [];
-
-            const messages = Object.values(data).sort((a, b) => a.timestamp - b.timestamp);
-
-            // Only return new messages
-            const newMessages = messages.filter(m => m.timestamp > this.lastMessageId);
-            if (newMessages.length > 0) {
-                this.lastMessageId = newMessages[newMessages.length - 1].timestamp;
-            }
-
-            return newMessages;
-        } catch (e) {
-            return [];
-        }
-    },
-
     startPolling(callback) {
-        this.pollInterval = setInterval(async () => {
-            const newMessages = await this.fetchMessages();
-            if (newMessages.length > 0) {
-                callback(newMessages);
+        if (this.eventSource) return;
+
+        // Use Server-Sent Events for real-time updates
+        this.eventSource = new EventSource(`https://ntfy.sh/${this.topic}/sse`);
+
+        this.eventSource.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                // ntfy sends the message body in the 'message' field of the event data
+                // But since we sent a JSON string as the body, we need to parse it again
+                // Wait, ntfy sends the raw body.
+                // Let's handle both raw text and JSON if possible.
+
+                // When we POST to ntfy, the body is the message.
+                // The SSE event.data is a JSON object describing the notification.
+                // The 'message' field contains our payload.
+
+                if (data.message) {
+                    try {
+                        const payload = JSON.parse(data.message);
+                        // Validate payload structure
+                        if (payload.user && payload.text && payload.time) {
+                            callback([{
+                                username: payload.user,
+                                text: payload.text,
+                                timestamp: payload.time
+                            }]);
+                        }
+                    } catch (e) {
+                        // Ignore non-JSON messages (maybe sent by others on the same topic)
+                    }
+                }
+            } catch (e) {
+                console.error("Chat SSE Error:", e);
             }
-        }, 2000); // Poll every 2 seconds
+        };
+
+        this.eventSource.onerror = (err) => {
+            console.error("EventSource failed:", err);
+            // It will auto-reconnect usually
+        };
     },
 
     stopPolling() {
-        if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-            this.pollInterval = null;
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
         }
     }
 };

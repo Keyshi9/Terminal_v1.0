@@ -52,14 +52,25 @@ const FileSystem = {
     },
 
     resolvePath(path) {
-        if (path.startsWith('/')) return path;
-        if (path === '..') {
-            const parts = this.currentPath.split('/').filter(p => p);
-            parts.pop();
-            return '/' + parts.join('/');
+        let parts;
+        if (path.startsWith('/')) {
+            parts = path.split('/').filter(p => p);
+        } else {
+            const currentParts = this.currentPath.split('/').filter(p => p);
+            const newParts = path.split('/').filter(p => p);
+            parts = [...currentParts, ...newParts];
         }
-        if (path === '.') return this.currentPath;
-        return this.currentPath === '/' ? '/' + path : this.currentPath + '/' + path;
+
+        const resolvedParts = [];
+        for (const part of parts) {
+            if (part === '..') {
+                resolvedParts.pop();
+            } else if (part !== '.') {
+                resolvedParts.push(part);
+            }
+        }
+
+        return '/' + resolvedParts.join('/');
     },
 
     ls(path = '.') {

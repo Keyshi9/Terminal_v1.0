@@ -3,6 +3,9 @@ const Terminal = {
     input: document.getElementById('command-input'),
     prompt: document.getElementById('prompt'),
 
+    user: 'user',
+    host: 'pro-sys',
+
     history: [],
     historyIndex: -1,
 
@@ -23,6 +26,8 @@ const Terminal = {
             color: 'Change text color (green | red | blue | pink | white)',
             theme: 'Change theme (matrix | cyberpunk | hacker | retro | ocean | dracula)',
             neofetch: 'Display system information',
+            username: 'Set username',
+            hostname: 'Set hostname',
             exit: 'Exit terminal (reload page)'
         },
         dev: {
@@ -108,6 +113,13 @@ const Terminal = {
         Blackjack.init();
         LiveChat.loadUsername();
 
+        // Load saved user/host
+        const savedUser = localStorage.getItem('pro-terminal-user');
+        if (savedUser) this.user = savedUser;
+
+        const savedHost = localStorage.getItem('pro-terminal-host');
+        if (savedHost) this.host = savedHost;
+
         // Load saved mode
         const savedMode = localStorage.getItem('pro-terminal-mode');
         if (savedMode && this.modes.includes(savedMode)) {
@@ -176,7 +188,7 @@ const Terminal = {
         if (this.modes.includes(mode)) {
             this.currentMode = mode;
             localStorage.setItem('pro-terminal-mode', mode);
-            this.prompt.innerHTML = `user@pro-sys [${mode}]:~$`;
+            this.prompt.innerHTML = `${this.user}@${this.host} [${mode}]:~$`;
             if (!silent) this.print(`Switched to ${mode} mode.`, 'system-msg');
         } else {
             this.print(`Invalid mode: ${mode}. Available: ${this.modes.join(', ')}`, 'error-msg');
@@ -330,6 +342,26 @@ const Terminal = {
                 break;
             case 'neofetch':
                 this.print(Utils.neofetch());
+                break;
+            case 'username':
+                if (params[0]) {
+                    this.user = params[0];
+                    localStorage.setItem('pro-terminal-user', this.user);
+                    this.switchMode(this.currentMode, true);
+                    this.print(`Username set to ${this.user}`);
+                } else {
+                    this.print(`Current username: ${this.user}`);
+                }
+                break;
+            case 'hostname':
+                if (params[0]) {
+                    this.host = params[0];
+                    localStorage.setItem('pro-terminal-host', this.host);
+                    this.switchMode(this.currentMode, true);
+                    this.print(`Hostname set to ${this.host}`);
+                } else {
+                    this.print(`Current hostname: ${this.host}`);
+                }
                 break;
             case 'exit':
                 this.print("Goodbye!", 'success-msg');

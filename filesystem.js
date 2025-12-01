@@ -148,6 +148,30 @@ const FileSystem = {
         return { success: true };
     },
 
+    writeFile(path, content) {
+        const fullPath = this.resolvePath(path);
+        const parts = fullPath.split('/').filter(p => p);
+        if (parts.length === 0) return { error: 'Invalid file path' };
+
+        const fileName = parts.pop();
+        const parentPath = '/' + parts.join('/');
+        const parentNode = parentPath === '/' ? this.structure['/'] : this.getNode(parentPath);
+
+        if (!parentNode || parentNode.type !== 'dir') return { error: 'Directory not found' };
+
+        if (parentNode.children[fileName]) {
+            if (parentNode.children[fileName].type !== 'file') {
+                return { error: 'Not a file' };
+            }
+            parentNode.children[fileName].content = content;
+        } else {
+            parentNode.children[fileName] = { type: 'file', content };
+        }
+
+        this.save();
+        return { success: true };
+    },
+
     rm(name) {
         const node = this.getNode(this.currentPath);
         if (!node || node.type !== 'dir') return { error: 'Invalid current directory' };

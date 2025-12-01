@@ -41,6 +41,7 @@ A professional, feature-rich web-based terminal emulator built with Vanilla Java
 - WHOIS domain lookup (RDAP)
 - Public IP geolocation
 - URL content fetcher (curl)
+- Simulated `iwctl` wireless controller (device/station)
 
 #### **Tools Mode** - Productivity Suite
 - Secure password generator (customizable length)
@@ -53,7 +54,7 @@ A professional, feature-rich web-based terminal emulator built with Vanilla Java
 
 #### **FS Mode** - Virtual File System
 - Complete Unix-like filesystem in localStorage
-- Commands: `ls`, `cd`, `pwd`, `mkdir`, `touch`, `cat`, `echo`, `rm`, `tree`
+- Commands: `ls`, `cd`, `pwd`, `mkdir`, `touch`, `cat`, `echo`, `rm`, `tree`, `nano` (overlay editor)
 - Persistent across sessions
 - File and directory management
 
@@ -142,14 +143,24 @@ price BTC
 portfolio
 simulate
 
+# Network diagnostics
+mode network
+ping google.com
+iwctl device list
+iwctl station wlan0 get-networks
+iwctl station wlan0 connect Home_Network
+
 # File system
 mode fs
 ls
 mkdir projects
 cd projects
 touch README.md
+nano README.md
 echo "Hello World" > README.md
 cat README.md
+
+Use `nano <filename>` to open the overlay editor (Ctrl+S saves, Esc cancels).
 
 # Fun stuff
 mode fun

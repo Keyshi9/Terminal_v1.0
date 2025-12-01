@@ -1,4 +1,4 @@
-# Dev Terminal System v1.0
+# Dev Terminal System v1.1
 
 A professional, feature-rich web-based terminal emulator built with Vanilla JavaScript. Experience a fully functional command-line interface directly in your browser with multiple modes, real-time data, games, and extensive customization options.
 

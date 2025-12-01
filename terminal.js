@@ -13,6 +13,20 @@ const Terminal = {
 
     modes: ['dev', 'crypto', 'network', 'tools', 'fs', 'fun', 'ai', 'chat'],
 
+    nanoEditorActive: false,
+
+    wifiState: {
+        interfaces: [
+            { name: 'wlan0', powered: true, connected: 'Home_Network' },
+            { name: 'wlan1', powered: false, connected: null }
+        ],
+        networks: [
+            { ssid: 'Home_Network', signal: '92%', security: 'WPA2', channel: 6 },
+            { ssid: 'Office-Guest', signal: '78%', security: 'WPA2', channel: 11 },
+            { ssid: 'CoffeeShop', signal: '64%', security: 'Open', channel: 1 }
+        ]
+    },
+
     commands: {
         global: {
             help: 'List commands for current mode',
@@ -58,7 +72,8 @@ const Terminal = {
             whois: 'WHOIS lookup',
             scan: 'Show public IP info',
             check: 'Check port status',
-            curl: 'Fetch URL content (e.g., curl https://api.github.com)'
+            curl: 'Fetch URL content (e.g., curl https://api.github.com)',
+            iwctl: 'Simulated iwctl wireless manager'
         },
         tools: {
             password: 'Generate password',
@@ -78,6 +93,7 @@ const Terminal = {
             cat: 'Display file content',
             echo: 'Write to file (e.g., echo "text" > file.txt)',
             rm: 'Remove file/directory',
+            nano: 'Edit files with nano-style editor',
             tree: 'Show directory tree'
         },
         fun: {
@@ -673,7 +689,80 @@ const Terminal = {
                     this.print(`Error: ${e.message}`, 'error-msg');
                 }
                 break;
+            case 'iwctl':
+                await this.handleIwctl(params);
+                break;
         }
+    },
+
+    async handleIwctl(params) {
+        const usage = "Usage: iwctl device list | station <iface> [scan|get-networks|connect <ssid>]";
+        if (params.length === 0) {
+            this.print(usage, 'system-msg');
+            return;
+        }
+
+        if (params[0] === 'device' && params[1] === 'list') {
+            this.print("Found Devices:");
+            this.wifiState.interfaces.forEach(dev => {
+                const power = dev.powered ? 'powered on' : 'powered off';
+                const connection = dev.connected ? `connected to ${dev.connected}` : 'disconnected';
+                this.print(`- ${dev.name}: ${power}, ${connection}`);
+            });
+            return;
+        }
+
+        if (params[0] === 'station') {
+            const iface = params[1];
+            if (!iface) {
+                this.print("Specify station <interface>.", 'error-msg');
+                return;
+            }
+            const ifaceInfo = this.wifiState.interfaces.find(i => i.name === iface);
+            if (!ifaceInfo) {
+                this.print(`Unknown interface: ${iface}`, 'error-msg');
+                return;
+            }
+            const action = params[2];
+            if (!action) {
+                const status = ifaceInfo.connected ? `connected to ${ifaceInfo.connected}` : 'disconnected';
+                this.print(`Station ${iface} is ${status}.`);
+                return;
+            }
+
+            if (action === 'scan') {
+                this.print(`Scanning for networks on ${iface}...`, 'system-msg');
+                await Utils.delay(600);
+                this.print(`Scan complete. Use 'iwctl station ${iface} get-networks' to list SSIDs.`);
+                return;
+            }
+
+            if (action === 'get-networks') {
+                this.print("Available networks:");
+                this.wifiState.networks.forEach(network => {
+                    this.print(`[${network.signal}] ${network.ssid} (${network.security}) channel ${network.channel}`);
+                });
+                return;
+            }
+
+            if (action === 'connect') {
+                const targetSsid = params.slice(3).join(' ');
+                if (!targetSsid) {
+                    this.print("Usage: iwctl station <iface> connect <ssid>", 'error-msg');
+                    return;
+                }
+                const found = this.wifiState.networks.find(n => n.ssid.toLowerCase() === targetSsid.toLowerCase());
+                if (!found) {
+                    this.print(`Network '${targetSsid}' not found.`, 'error-msg');
+                    return;
+                }
+                ifaceInfo.connected = found.ssid;
+                this.print(`Station ${iface} connected to ${found.ssid}.`, 'success-msg');
+                return;
+            }
+        }
+
+        this.print(usage, 'error-msg');
     },
 
     executeTools(cmd, params) {
@@ -953,6 +1042,13 @@ const Terminal = {
                     this.print(`Removed: ${params[0]}`);
                 }
                 break;
+            case 'nano':
+                if (!params[0]) {
+                    this.print("Usage: nano <filename>", 'error-msg');
+                    return;
+                }
+                this.openNanoEditor(params[0]);
+                break;
             case 'tree':
                 this.print("Directory tree:");
                 this.print(FileSystem.currentPath);
@@ -965,6 +1061,104 @@ const Terminal = {
                 }
                 break;
         }
+    },
+
+    openNanoEditor(filename) {
+        if (this.nanoEditorActive) {
+            this.print("Nano editor is already open.", 'error-msg');
+            return;
+        }
+
+        const targetPath = FileSystem.resolvePath(filename);
+        const node = FileSystem.getNode(targetPath);
+
+        if (node && node.type !== 'file') {
+            this.print("Cannot edit: target is not a file.", 'error-msg');
+            return;
+        }
+
+        const startingContent = node ? node.content || '' : '';
+        this.nanoEditorActive = true;
+        this.input.disabled = true;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'nano-overlay';
+
+        const panel = document.createElement('div');
+        panel.className = 'nano-panel';
+
+        const header = document.createElement('div');
+        header.className = 'nano-header';
+        header.textContent = `Editing: ${filename}`;
+
+        const subheader = document.createElement('div');
+        subheader.className = 'nano-subheader';
+        subheader.textContent = `Path: ${targetPath} - Ctrl+S to save | Esc to cancel`;
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'nano-textarea';
+        textarea.value = startingContent;
+        textarea.spellcheck = false;
+
+        const footer = document.createElement('div');
+        footer.className = 'nano-footer';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'nano-btn';
+        saveBtn.textContent = 'Save (Ctrl+S)';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'nano-btn';
+        cancelBtn.textContent = 'Cancel (Esc)';
+
+        footer.append(saveBtn, cancelBtn);
+        panel.append(header, subheader, textarea, footer);
+        overlay.appendChild(panel);
+        document.body.appendChild(overlay);
+        textarea.focus();
+
+        const handleSave = () => {
+            const writeResult = FileSystem.writeFile(targetPath, textarea.value);
+            if (writeResult.error) {
+                this.print(writeResult.error, 'error-msg');
+                return;
+            }
+            this.print(`Saved: ${targetPath}`, 'success-msg');
+            cleanup();
+        };
+
+        const handleCancel = () => {
+            this.print(`Cancelled editing ${targetPath}.`, 'system-msg');
+            cleanup();
+        };
+
+        const handleKeys = (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+                event.preventDefault();
+                handleSave();
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel();
+            }
+        };
+
+        const cleanup = () => {
+            textarea.removeEventListener('keydown', handleKeys);
+            saveBtn.removeEventListener('click', handleSave);
+            cancelBtn.removeEventListener('click', handleCancel);
+            if (overlay.parentElement) {
+                document.body.removeChild(overlay);
+            }
+            this.nanoEditorActive = false;
+            this.input.disabled = false;
+            this.input.focus();
+        };
+
+        textarea.addEventListener('keydown', handleKeys);
+        saveBtn.addEventListener('click', handleSave);
+        cancelBtn.addEventListener('click', handleCancel);
     },
 
     async executeFun(cmd, params) {

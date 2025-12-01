@@ -112,3 +112,74 @@ body {
 }
 
 /* Scrollbar hidden globally */
+
+.nano-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.nano-panel {
+    width: min(90vw, 900px);
+    max-height: 90vh;
+    background: #050505;
+    border: 1px solid #33ff33;
+    box-shadow: 0 0 20px rgba(51, 255, 51, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+}
+
+.nano-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.nano-subheader {
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+}
+
+.nano-textarea {
+    flex: 1;
+    min-height: 320px;
+    width: 100%;
+    background: rgba(13, 13, 13, 0.95);
+    border: 1px solid #33ff33;
+    color: var(--text-color);
+    font-family: var(--font-family);
+    font-size: 16px;
+    padding: 12px;
+    resize: vertical;
+    outline: none;
+}
+
+.nano-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.nano-btn {
+    background: transparent;
+    border: 1px solid #33ff33;
+    color: var(--text-color);
+    padding: 6px 16px;
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: 14px;
+    transition: background 0.15s ease;
+}
+
+.nano-btn:hover {
+    background: #33ff33;
+    color: #000;
+}

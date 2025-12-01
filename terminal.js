@@ -191,7 +191,7 @@ const Terminal = {
     },
 
     async printWelcomeMessage() {
-        this.print("Dev Terminal System v1.0", 'success-msg');
+        this.print("Dev Terminal System v1.1", 'success-msg');
         this.print("Made by SS.");
         this.print("Type 'help' to see commands.");
         this.print("Type 'mode dev | crypto | network | tools' to switch.");
